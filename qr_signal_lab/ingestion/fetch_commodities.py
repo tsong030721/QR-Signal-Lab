@@ -1,3 +1,6 @@
+"""
+Functions to fetch OHLCV data (single/batch) as DataFrames for ticker(s).
+"""
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
