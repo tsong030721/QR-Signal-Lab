@@ -12,7 +12,7 @@ from .fetch_commodities import fetch_batch_separate
 
 logger = logging.getLogger(__name__)
 
-def run_ingestion(cfg) -> dict:
+def run_ingestion(cfg) -> dict[str, str]:
     results = dict()
 
     # Fetch DataFrames
@@ -49,6 +49,8 @@ def run_ingestion(cfg) -> dict:
         except Exception as e:
             logger.exception("Failed to write %s", symbol)
             results[symbol] = str(e)
+    
+    return results
 
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -71,7 +73,7 @@ def main() -> None:
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
 
-    run_ingestion(config)
+    results =run_ingestion(config)
 
 if __name__ == "__main__":
     main()
