@@ -11,16 +11,15 @@ Picking up from hiatus
 Finalized run_ingestion
 TODO: Learn the df and pandas basics
 
-Verify end-to-end
-    run it and confirm you get 3 parquet files in data/raw/
-    confirm basic invariants in the notebook: sorted datetime index, expected columns, sane row counts
-Write down the raw data contract
-    In a short README note or comments:
-    what columns you expect from Yahoo
-    what file naming convention you use
-    that files are overwritten each run in V0
-Commit V0 ingestion
-    This is a milestone commit.
+2026-02-14
+Learn some pandas (Data School)
+Verify end-to-end for run_ingestion; examine the raw parquets
+Document raw data contract
+
+2026-02-15
+Centralize helpers for path, logging, types
+Clean up run_ingestion using global helpers
+
 Start cleaning (next module)
     Create qr_signal_lab/cleaning/clean_commodities.py that:
         loads raw parquet

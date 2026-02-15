@@ -5,34 +5,40 @@ Logs rows, min/max date, failures for each ticker.
 """
 from pathlib import Path
 import argparse
-import logging
 
 from . import config
 from .fetch_commodities import fetch_batch_separate
+from ..common import logging, paths
+from ..common.errors import InvalidRequest, DataSourceError, EmptyData
 
-logger = logging.getLogger(__name__)
+logger = logging.get(__name__)
 
 def run_ingestion(cfg) -> dict[str, str]:
     results = dict()
 
     # Fetch DataFrames
     symbols = cfg.TICKERS
-    df_list = fetch_batch_separate(
-        symbols,
-        start=cfg.START_DATE,
-        end=cfg.END_DATE,
-        interval=cfg.INTERVAL
-    )
-
-    # Write parquet files to data/raw
-    root = Path(__file__).resolve().parents[2]
-    out_dir = root / "data" / "raw"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        df_list = fetch_batch_separate(
+            symbols,
+            start=cfg.START_DATE,
+            end=cfg.END_DATE,
+            interval=cfg.INTERVAL
+        )
+    except EmptyData as e:
+        logger.warning(e)
+        return results
+    except (DataSourceError, InvalidRequest) as e:
+        logger.error(e)
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected failure during ingestion: {e}")
+        raise
 
     for symbol, df in zip(symbols, df_list):
         try:
             df.to_parquet(
-                out_dir / f"{symbol}.parquet",
+                paths.raw_path(symbol),
                 engine="pyarrow",
                 compression="snappy"
             )
@@ -62,18 +68,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    level = logging.WARNING
-    if args.verbose == 1:
-        level = logging.INFO
-    if args.verbose == 2:
-        level = logging.DEBUG
+    logging.configure(args.verbose)
 
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    )
-
-    results =run_ingestion(config)
+    results = run_ingestion(config)
 
 if __name__ == "__main__":
     main()

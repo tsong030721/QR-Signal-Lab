@@ -4,8 +4,8 @@ Functions to fetch OHLCV data (single/batch) as DataFrames for ticker(s).
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
-from qr_signal_lab.common.errors import InvalidRequest, DataSourceError, EmptyData
 from .config import PERIODS, INTERVALS
+from ..common.errors import InvalidRequest, DataSourceError, EmptyData
 
 # ----------------------------
 # Public API
