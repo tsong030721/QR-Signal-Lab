@@ -20,13 +20,11 @@ Document raw data contract
 Centralize helpers for path, logging, types
 Clean up run_ingestion using global helpers
 
+2026-02-16
+
 Start cleaning (next module)
     Create qr_signal_lab/cleaning/clean_commodities.py that:
-        loads raw parquet
-        standardizes column names (lowercase, consistent)
-        enforces dtypes
-        de-dupes + sorts
-        handles missing dates explicitly (decide policy)
+
         writes data/clean/{symbol}.parquet
 Add an access layer stub
     qr_signal_lab/access/data_api.py with:
