@@ -11,7 +11,7 @@ V0 -> V4. Each layer hardens a specific layer of research pipeline.
     - Backtesting
     - Multi-asset research
 
-Build a own personal research platform and playground
+Build your own personal research platform and playground
     - Test hypotheses from papers and blogs
     - Test my own ideas
     - Generate real, interpretable results
