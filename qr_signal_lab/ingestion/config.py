@@ -9,4 +9,3 @@ TICKERS = ["CL=F", "GC=F", "NG=F", "ZC=F", "HG=F"] # Crude Oil, Gold, Natural Ga
 START_DATE = "2001-01-01"
 END_DATE = None
 INTERVAL = "1d"
-RAW_DIR = "data/raw"
