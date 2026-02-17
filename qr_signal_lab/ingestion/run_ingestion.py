@@ -3,7 +3,6 @@ Script to loop through the desired tickers.
 Writes each DataFrame to data/raw/{ticker}.parquet
 Logs rows, min/max date, failures for each ticker.
 """
-from pathlib import Path
 import argparse
 
 from . import config
@@ -34,17 +33,18 @@ def run_ingestion(cfg) -> dict[str, str]:
     except Exception as e:
         logger.exception(f"Unexpected failure during ingestion: {e}")
         raise
-
+    
     for symbol, df in zip(symbols, df_list):
         try:
+            path = paths.raw_path(symbol)
             df.to_parquet(
-                paths.raw_path(symbol),
+                path,
                 engine="pyarrow",
                 compression="snappy"
             )
 
             logger.info(
-                "Wrote %s | rows = %d | start=%s | end =%s",
+                "Wrote raw %s | rows = %d | start=%s | end =%s",
                 symbol,
                 len(df),
                 df.index.min(),
