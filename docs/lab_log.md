@@ -21,11 +21,12 @@ Centralize helpers for path, logging, types
 Clean up run_ingestion using global helpers
 
 2026-02-16
+Finished clean_commodities.py.
+Started work on run_clean - ended on helper functions for paths.
 
-Start cleaning (next module)
-    Create qr_signal_lab/cleaning/clean_commodities.py that:
+2026-02-17
+Completed run_clean.py -> verified it writes the cleaned parquet files.
 
-        writes data/clean/{symbol}.parquet
 Add an access layer stub
     qr_signal_lab/access/data_api.py with:
     load(symbol, start=None, end=None, source="clean") -> DataFrame

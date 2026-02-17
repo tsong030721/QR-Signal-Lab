@@ -4,17 +4,30 @@ Functions to standardize raw parquet data files.
 """
 import pandas as pd
 from . import config
-from ..common.paths import clean_path, raw_path
+from ..common import paths
 
 # ----------------------------
 # Public API
 # ----------------------------
 def clean_one(symbol: str) -> pd.DataFrame:
-    df = pd.read_parquet(raw_path(symbol))
+    path = paths.raw_path(symbol)
+    if not paths.valid_file(path):
+        raise Exception(f"Invalid path for {symbol}.")
+    
+    try:
+        df = pd.read_parquet(path)
+    except Exception as e:
+        raise Exception(f"Error while reading from {path}: {e}.")
+    
     df = _standardize_columns(df)
     df = _enforce_types(df)
     df = _sort_and_dedupe(df)
     df= _handle_missing(df)
+
+    return df
+
+def clean_many(symbols: list[str]) -> list[pd.DataFrame]:
+    df = [clean_one(symbol) for symbol in symbols]
 
     return df
 
