@@ -35,7 +35,7 @@ def fetch_batch(symbols: list[str], *, start: str | None = None, end: str | None
     return _yfdownload_wrapper(symbols, start, end, period, interval)
 
 
-def fetch_batch_separate(symbols: list[str], start: str | None = None, end: str | None = None,
+def fetch_batch_separate(symbols: list[str], *, start: str | None = None, end: str | None = None,
                          period: str | None = None, interval: str = "1d") -> list[pd.DataFrame]:
     """
     Fetches a separate OHLCV for each of the multiple tickers. 
