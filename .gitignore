@@ -1,5 +1,4 @@
 data/
-notebooks/
 *.duckdb
 __pycache__/
 .env
