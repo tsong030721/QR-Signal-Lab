@@ -27,6 +27,8 @@ Started work on run_clean - ended on helper functions for paths.
 2026-02-17
 Completed run_clean.py -> verified it writes the cleaned parquet files.
 
-Add an access layer stub
-    qr_signal_lab/access/data_api.py with:
-    load(symbol, start=None, end=None, source="clean") -> DataFrame
+2026-02-18
+Completed v0-access data_api.py - implemented `load` to load a date range of cleaned data.
+
+2026-02-24
+Finalize v0 and define objectives for v1.
