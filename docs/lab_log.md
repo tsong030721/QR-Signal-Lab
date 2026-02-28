@@ -32,3 +32,6 @@ Completed v0-access data_api.py - implemented `load` to load a date range of cle
 
 2026-02-24
 Finalize v0 and define objectives for v1.
+
+2026-02-28
+Implement basic utilities for `feature/base.py` (rolling, expanding, returns)

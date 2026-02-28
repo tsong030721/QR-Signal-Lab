@@ -1,63 +1,122 @@
 """
-Low-level feature utilities - atomic, reusable transformations.
+Low-level feature utilities: rolling & cumulative data, lagged returns.
+Minimum periods and lagging periods are exposed.
+NaN's from out-of-scope data are not truncated.
 """
 import pandas as pd
+import numpy as np
 
 from ..common.errors import InvalidRequest
-
-def lag(series: pd.Series, periods: int = 1) -> pd.Series:
-    """
-    Lag the data by *periods* to prevent lookahead bias.
-    """
-    if periods >= series.size:
-        raise InvalidRequest(f"Lagging period ({periods}) is at least the length of series ({series.size}).")
-    
-    return series.shift(periods)
 
 # ----------------------------
 # Rolling
 # ----------------------------
-def rolling_mean(series: pd.Series, window: int) -> pd.Series:
+def rolling_mean(
+        series: pd.Series, 
+        window: int, 
+        min_periods: int | None = None
+    ) -> pd.Series:
     """
-    Compute the rolling mean with a given window size.
+    Compute the rolling mean with *window*.
     """
-    if window > series.size:
-        raise InvalidRequest(f"Window ({window}) is greater than the length of series ({series.size}).")
-    
-    return series.rolling(window=window).mean()
+    if min_periods is None:
+        min_periods = window
 
-def rolling_std(series: pd.Series, window: int) -> pd.Series:
-    """
-    Compute the rolling standard deviation with a given window size.
-    """
-    if window > series.size:
-        raise InvalidRequest(f"Window ({window}) is greater than the length of series ({series.size}).")
-    
-    return series.rolling(window=window).std()
+    _check_window(series.size, window, min_periods)
 
-def rolling_zscore(series: pd.Series, window: int) -> pd.Series:
-    """
-    Compute the rolling mean with a given window size.
-    """
-    if window > series.size:
-        raise InvalidRequest(f"Window ({window}) is greater than the length of series ({series.size}).")
-    
-    rolling = series.rolling(window=window)
-    zscore = (rolling - rolling.mean()) / rolling.std()
+    return series.rolling(window, min_periods).mean()
 
-    return zscore
+
+def rolling_std(
+        series: pd.Series, 
+        window: int, 
+        min_periods: int | None = None,
+        ddof: int = 0
+    ) -> pd.Series:
+    """
+    Compute the rolling standard deviation with *window*.
+    """
+    if min_periods is None:
+        min_periods = window
+
+    _check_window(series.size, window, min_periods)
+
+    return series.rolling(window, min_periods).std(ddof)
+
+
+def rolling_zscore(
+        series: pd.Series, 
+        window: int, 
+        min_periods: int | None = None, 
+        ddof: int = 0
+    ) -> pd.Series:
+    """
+    Compute the rolling mean with a given *window*.
+    """
+    if min_periods is None:
+        min_periods = window
+
+    _check_window(series.size, window, min_periods)
+    
+    rolling = series.rolling(window, min_periods)
+
+    return (series - rolling.mean()) / rolling.std(ddof)
+
+
+# ----------------------------
+# Cumulative
+# ----------------------------
+def expanding_mean(series: pd.Series) -> pd.Series:
+    return series.expanding().mean()
+
+def expanding_std(series: pd.Series) -> pd.Series:
+    return series.expanding().std()
+
+def expanding_zscore(series: pd.Series, ddof : int = 0) -> pd.Series:
+    expanding = series.expanding()
+
+    return (series - expanding.mean()) / expanding.std(ddof)
 
 # ----------------------------
 # Returns
 # ----------------------------
+def lag(series: pd.Series, periods: int = 1) -> pd.Series:
+    """
+    Lag the data by *periods* to prevent lookahead bias.
+    """
+    _check_period(series.size, periods)
+
+    return series.shift(periods)
+
+
 def pct_return(series: pd.Series, periods: int = 1) -> pd.Series:
     """
     Percentage return: (P_t/P_{t-n}) - 1
     """
-    pass
+    _check_period(series.size, periods)
+
+    return series.pct_change(periods)
+
 
 def log_return(series: pd.Series, periods: int = 1) -> pd.Series:
     """
     Log return: log(P_t/P_{t-n})
     """
-    pass
+    _check_period(series.size, periods)
+
+    return np.log(series).diff(periods)
+
+
+# ----------------------------
+# Helpers
+# ----------------------------
+def _check_window(size: int, window: int, min_periods: int) -> None:
+    if window > size:
+        raise InvalidRequest(f"Window ({window}) exceeds length of series ({size}).")
+    if min_periods > window:
+        raise InvalidRequest(f"Min_periods ({min_periods}) exceeds window ({window}).")
+    
+    
+def _check_period(size: int, period: int) -> None:
+    if period > size:
+        raise InvalidRequest(f"Period ({period}) exceeds length of series ({size}).")
