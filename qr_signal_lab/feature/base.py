@@ -51,7 +51,7 @@ def rolling_zscore(
         ddof: int = 0
     ) -> pd.Series:
     """
-    Compute the rolling mean with a given *window*.
+    Compute the rolling z-score with a given *window*.
     """
     if min_periods is None:
         min_periods = window
