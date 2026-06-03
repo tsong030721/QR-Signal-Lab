@@ -1,5 +1,5 @@
 """
-Low-level feature utilities: rolling & cumulative data, lagged returns.
+Low-level utilities: rolling & cumulative data, lagged returns.
 Minimum periods and lagging periods are exposed.
 NaN's from out-of-scope data are not truncated.
 """
