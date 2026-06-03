@@ -1,7 +1,7 @@
 """
 Single asset time-series momentum features.
-Momentum is the recent directional persistence in returns.
-Helps to answer: how like is it that the recent trend continues?
+   - Recent directional persistence in returns
+   - Likeliness that a trend continues
 """
 import pandas as pd
 
