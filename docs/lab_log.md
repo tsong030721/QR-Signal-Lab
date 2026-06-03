@@ -35,3 +35,7 @@ Finalize v0 and define objectives for v1.
 
 2026-02-28
 Implement basic utilities for `feature/base.py` (rolling, expanding, returns)
+
+2026-06-03
+Picking the project back up.
+Implement utilities for `feature/momentum.py` and `feature/normalization.py`
