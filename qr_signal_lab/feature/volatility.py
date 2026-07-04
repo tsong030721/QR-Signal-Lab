@@ -1,6 +1,8 @@
 """
-Compute volatility in the desired time window.
-   - Compute volatility comparisons and trends
+Volatility utilities for computing volatility statistics and trends.
+
+All functions operate on pandas Series and return aligned Series
+preserving the original index. 
 """
 import math
 import pandas as pd
@@ -11,12 +13,10 @@ def realized_volatility(
         series: pd.Series,
         window: int,
         annualized: bool = False
-    ):
+    ) -> pd.Series:
     """
-    Compute rolling sdev on log returns
-    [series]     : Price data for asset
-    [window]     : Length of sliding window
-    [annualized] : Option to extrapolate annualized values
+    Compute the rolling standard deviation on log returns
+        [annualized] : Option to extrapolate annualized values
     """
     volatility = rolling_std(log_return(series), window)
     if annualized:
@@ -27,16 +27,16 @@ def realized_volatility(
 
 def vol_regime_flag(
         series: pd.Series,
-        short_window: int = 20,
-        long_window: int = 100
-    ):
+        short_window: int,
+        long_window: int | None = None
+    ) -> pd.Series:
     """
-    Determine whether short term volatility exceeds long term
-    [series]       : Price data for asset
-    [short_window] : Length of short-term window
-    [long_windwow] : Length of long-term window
-    Flagged as 0 or 1
+    Determine whether short term volatility exceeds long term,
+    flagged as 0/1
     """
+    if long_window is None:
+        long_window = 5 * short_window
+        
     short_vol = realized_volatility(series, short_window)
     long_vol = realized_volatility(series, long_window)
     flag = (short_vol > long_vol).astype(int)

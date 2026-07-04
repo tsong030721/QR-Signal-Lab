@@ -1,7 +1,8 @@
 """
-Low-level utilities: rolling & cumulative data, lagged returns.
-Minimum periods and lagging periods are exposed.
-NaN's from out-of-scope data are not truncated.
+Foundational utilities for computing rolling statistics and returns.
+
+All functions operate on pandas Series and return aligned Series
+preserving the original index. 
 """
 import pandas as pd
 import numpy as np
@@ -17,7 +18,7 @@ def rolling_mean(
         min_periods: int | None = None
     ) -> pd.Series:
     """
-    Compute the rolling mean with *window*.
+    Compute the rolling mean of a time series.
     """
     if min_periods is None:
         min_periods = window
@@ -34,7 +35,8 @@ def rolling_std(
         ddof: int = 0
     ) -> pd.Series:
     """
-    Compute the rolling standard deviation with *window*.
+    Compute the rolling standard deviation of a time series.
+        [ddof]: degrees of freedom for std computation
     """
     if min_periods is None:
         min_periods = window
@@ -51,7 +53,8 @@ def rolling_zscore(
         ddof: int = 0
     ) -> pd.Series:
     """
-    Compute the rolling z-score with a given *window*.
+    Compute the rolling z-score of a time series.
+        [ddof]: degrees of freedom for std computation
     """
     if min_periods is None:
         min_periods = window
@@ -62,28 +65,10 @@ def rolling_zscore(
 
     return (series - rolling.mean()) / rolling.std(ddof)
 
-
-# ----------------------------
-# Cumulative
-# ----------------------------
-def expanding_mean(series: pd.Series) -> pd.Series:
-    return series.expanding().mean()
-
-def expanding_std(series: pd.Series) -> pd.Series:
-    return series.expanding().std()
-
-def expanding_zscore(series: pd.Series, ddof : int = 0) -> pd.Series:
-    expanding = series.expanding()
-
-    return (series - expanding.mean()) / expanding.std(ddof)
-
 # ----------------------------
 # Returns
 # ----------------------------
 def lag(series: pd.Series, periods: int = 1) -> pd.Series:
-    """
-    Lag the data by *periods* to prevent lookahead bias.
-    """
     _check_period(series.size, periods)
 
     return series.shift(periods)
@@ -91,7 +76,7 @@ def lag(series: pd.Series, periods: int = 1) -> pd.Series:
 
 def pct_return(series: pd.Series, periods: int = 1) -> pd.Series:
     """
-    Percentage return: (P_t/P_{t-n}) - 1
+    Compute the percentage returns of a time series: (P_t/P_{t-n})-1
     """
     _check_period(series.size, periods)
 
@@ -100,11 +85,11 @@ def pct_return(series: pd.Series, periods: int = 1) -> pd.Series:
 
 def log_return(series: pd.Series, periods: int = 1) -> pd.Series:
     """
-    Log return: log(P_t/P_{t-n})
+    Compute the log returns of a time series: log(P_t/P_{t-n})
     """
     _check_period(series.size, periods)
 
-    return np.log(series).diff(periods)
+    return np.log(series / lag(series, periods))
 
 
 # ----------------------------
