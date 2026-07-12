@@ -40,7 +40,8 @@ def vol_regime_flag(
     short_vol = realized_volatility(series, short_window)
     long_vol = realized_volatility(series, long_window)
     flag = (short_vol > long_vol).astype(int)
-    flag[(short_vol.isna()) | (long_vol.isna())] = np.nan
+    # flag[(short_vol.isna()) | (long_vol.isna())] = np.nan  Causes flag to be of float type
+    flag[(short_vol.isna()) | (long_vol.isna())] = 0
 
     return flag
 
