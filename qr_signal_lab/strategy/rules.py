@@ -1,9 +1,9 @@
 """
 Apply signal-to-position mappings for computed features.
 
-Each function takes a DataFrame of feature values and returns
-a DataFrame of values in {-1,0,1} - corresponding to short, flat,
-long, respectively - with dimensions preserved.
+Each function takes a DataFrame of feature values and returns a DataFrame of positions 
+with values in {-1,0,1} - corresponding to short, flat,long, respectively - with 
+dimensions preserved.
 """
 import pandas as pd
 
@@ -12,9 +12,8 @@ def momentum_positions(
         criteria: int | None = 0
     ) -> pd.DataFrame:
     """
-    Compute signal (long, short) based on time series momentum.
-        [momentum]: Wide dataframe with time series momentum data of
-            multiple tickers.
+    Compute signal (long, flat, short) based on time series momentum.
+        [momentum]: Wide dataframe with time series momentum data of multiple tickers.
         [criteria]: Borderline value for determining long/short.
     """
     def convert(x):
@@ -28,13 +27,13 @@ def csec_rank_positions(
         bottom_pct: float | None = 0.8
     ) -> pd.DataFrame:
     """
-    Compute signal (long, short) based on ranking across tickers.
+    Compute signal (long, flat, short) based on ranking across tickers.
         [pct_rank]: Wide data frame with ticker rankings normalized to [0,1]
         [top_pct]: Top percentile value of tickers to long.
         [bottom_pct]: Bottom percentile value of tickers to short.
     """
     def convert(x):
-        if x < top_pct:
+        if x <= top_pct:
             return 1
         elif x > bottom_pct:
             return -1
@@ -50,7 +49,7 @@ def vol_filtered_positions(
     """
     Deactivate positions that have a volatility flag.
         [positions]: Computed short/long/flat positions.
-        [vol_flag]: Corresponding df of volatility flags.
+        [vol_flag]: Corresponding DataFrame of volatility flags.
     """
     filter = 1 - vol_flag
 
