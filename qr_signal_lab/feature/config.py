@@ -1,4 +1,4 @@
-from .base import rolling_mean, rolling_std, rolling_zscore, pct_return, log_return
+from .base import rolling_mean, rolling_std, rolling_zscore
 from .momentum import momentum_return, ma_ratio, ema_diff
 from .normalization import cross_sectional_rank, cross_sectional_zscore
 from .volatility import realized_volatility, vol_regime_flag
@@ -20,18 +20,6 @@ FEATURES_1D = {
                     "method": rolling_zscore,
                     "class": "base",
                     "window": 20,
-                    "normalize": False
-                    }, 
-                "pct_return": {
-                    "method": pct_return,
-                    "class": "base",
-                    "window": None,
-                    "normalize": False
-                    }, 
-                "log_return": {
-                    "method": log_return,
-                    "class": "base",
-                    "window": None,
                     "normalize": False
                     }, 
                 "momentum_return": {

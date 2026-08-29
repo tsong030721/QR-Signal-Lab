@@ -31,17 +31,20 @@ def vol_regime_flag(
         long_window: int | None = None
     ) -> pd.Series:
     """
-    Determine whether short term volatility exceeds long term,
-    flagged as 0/1
+    Flag whether short-term realized volatility exceeds long-term:
+    1 = high-vol regime, 0 = calm, NaN = unknown (insufficient history).
+    NaN is NOT calm - callers must treat it as high-vol / do-not-trade
+    (see strategy.rules.vol_filtered_positions).
     """
     if long_window is None:
         long_window = 5 * short_window
-        
+
     short_vol = realized_volatility(series, short_window)
     long_vol = realized_volatility(series, long_window)
-    flag = (short_vol > long_vol).astype(int)
-    # flag[(short_vol.isna()) | (long_vol.isna())] = np.nan  Causes flag to be of float type
-    flag[(short_vol.isna()) | (long_vol.isna())] = 0
+
+    known = short_vol.notna() & long_vol.notna()
+    flag = pd.Series(np.nan, index=series.index)
+    flag[known] = (short_vol[known] > long_vol[known]).astype(int)
 
     return flag
 

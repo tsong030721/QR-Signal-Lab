@@ -4,7 +4,10 @@ Functions to standardize raw parquet data files.
 """
 import pandas as pd
 from . import config
-from ..common import paths
+from ..common import logging, paths
+from ..common.errors import DataSourceError, DataValidationError
+
+logger = logging.get(__name__)
 
 # ----------------------------
 # Public API
@@ -12,17 +15,17 @@ from ..common import paths
 def clean_one(symbol: str) -> pd.DataFrame:
     path = paths.raw_path(symbol)
     if not paths.valid_file(path):
-        raise Exception(f"Invalid path for {symbol}.")
-    
+        raise DataValidationError(f"Invalid path for {symbol}.")
+
     try:
         df = pd.read_parquet(path)
     except Exception as e:
-        raise Exception(f"Error while reading from {path}: {e}.")
-    
+        raise DataSourceError(f"Error while reading from {path}: {e}.") from e
+
     df = _standardize_columns(df)
     df = _enforce_types(df)
     df = _sort_and_dedupe(df)
-    df= _handle_missing(df)
+    df = _handle_missing(df, symbol)
 
     return df
 
@@ -66,14 +69,28 @@ def _sort_and_dedupe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Sort and deduplicate dataframe.
     """
-    if not df.index.is_unique:
-        df = df[df.index.duplicated(keep='first')]
-    
     if not df.index.is_monotonic_increasing:
         df = df.sort_index()
 
+    if not df.index.is_unique:
+        df = df[~df.index.duplicated(keep='first')]
+
     return df
 
-def _handle_missing(df: pd.DataFrame) -> pd.DataFrame:
+def _handle_missing(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
+    """
+    Drop rows with a non-positive price. A price <= 0 (e.g. the CL=F WTI settlement
+    of -$37.63 on 2020-04-20) is not a valid observation - propagating it produces
+    a >100% negative return and NaN log-returns instead of a clean failure.
+    """
+    invalid = (df[config.PRICE_COLUMNS] <= 0).any(axis=1)
+    if invalid.any():
+        logger.warning(
+            "%s: dropping %d row(s) with non-positive price: %s",
+            symbol,
+            int(invalid.sum()),
+            [d.strftime("%Y-%m-%d") for d in df.index[invalid]],
+        )
+        df = df.loc[~invalid]
 
     return df
