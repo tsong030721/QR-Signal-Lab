@@ -71,6 +71,9 @@ def main() -> None:
     logging.configure(args.verbose)
 
     results = run_ingestion(config)
+    failed = {symbol: msg for symbol, msg in results.items() if msg != "ok"}
+    if failed:
+        raise DataSourceError(f"Ingestion failed for {len(failed)} symbol(s): {failed}")
 
 if __name__ == "__main__":
     main()

@@ -7,7 +7,7 @@ from datetime import datetime
 from qr_signal_lab.common.config import CLEAN_DIR
 
 from ..common import paths
-from ..common.errors import InvalidRequest
+from ..common.errors import InvalidRequest, DataSourceError
 
 # ----------------------------
 # Public API
@@ -24,7 +24,7 @@ def load(symbol: str, *, start: str | None = None, end: str | None = None) -> pd
     try:
         df = pd.read_parquet(path)
     except Exception as e:
-        raise Exception(f"Failed to load data for {symbol}: {e}")
+        raise DataSourceError(f"Failed to load data for {symbol}: {e}") from e
 
     # Verify date range is valid
     start, end = _check_dates(start, end, symbol, df)

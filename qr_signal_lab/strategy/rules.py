@@ -9,6 +9,8 @@ flat (0), never to a directional bet.
 import numpy as np
 import pandas as pd
 
+from ..common.errors import SchemaMismatch
+
 def momentum_positions(
         momentum: pd.DataFrame,
         criteria: float | None = 0
@@ -56,6 +58,13 @@ def vol_filtered_positions(
         [vol_flag]: Corresponding DataFrame of volatility flags (1 = high-vol,
                     0 = calm, NaN = unknown - treated as high-vol, not calm).
     """
+    if not positions.index.equals(vol_flag.index) or not positions.columns.equals(vol_flag.columns):
+        raise SchemaMismatch(
+            "Index/columns mismatch between positions and vol_flag - align "
+            "explicitly upstream rather than relying on pandas' implicit "
+            "union/fill, which would silently drop or zero-fill labels."
+        )
+
     keep = 1 - vol_flag.fillna(1)
 
-    return positions.mul(keep, fill_value=0)
+    return positions.mul(keep)

@@ -7,7 +7,13 @@ preserving the original index.
 import math
 import pandas as pd
 import numpy as np
-from .base import rolling_std, log_return
+from .base import rolling_std
+from .returns import log_return_series
+
+# Declared periods-per-year assumption for annualization - trading days, not
+# calendar days. Any caller annualizing vol/Sharpe/etc. elsewhere should use
+# this rather than a bare literal.
+TRADING_DAYS_PER_YEAR = 252
 
 def realized_volatility(
         series: pd.Series,
@@ -16,12 +22,13 @@ def realized_volatility(
     ) -> pd.Series:
     """
     Compute the rolling standard deviation on log returns
-        [annualized] : Option to extrapolate annualized values
+        [annualized] : Option to extrapolate annualized values, assuming
+                        TRADING_DAYS_PER_YEAR periods/year
     """
-    volatility = rolling_std(log_return(series), window)
+    volatility = rolling_std(log_return_series(series, series.name or "realized_volatility input"), window)
     if annualized:
-        volatility *= math.sqrt(252)
-    
+        volatility *= math.sqrt(TRADING_DAYS_PER_YEAR)
+
     return volatility
 
 

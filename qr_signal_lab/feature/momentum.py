@@ -7,12 +7,15 @@ preserving the original index.
 import pandas as pd
 
 from . import base
+from .returns import log_return_series
 
 def momentum_return(series: pd.Series, window: int) -> pd.Series:
     """
-    Compute the momentum of returns (log) of a time series.
+    Compute the momentum of returns (log) of a time series over `window` periods.
+    Routed through feature.returns.log_return_series so this stays the same
+    validated computation feature.returns applies, not a re-derived one.
     """
-    return base.log_return(series, window)
+    return log_return_series(series, series.name or "momentum_return input", window)
 
 
 def ma_ratio(series: pd.Series, window: int) -> pd.Series:

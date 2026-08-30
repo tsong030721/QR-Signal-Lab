@@ -6,6 +6,7 @@ import argparse
 
 from .clean_commodities import clean_many
 from ..common import logging, paths
+from ..common.errors import DataSourceError
 
 logger = logging.get(__name__)
 
@@ -41,7 +42,7 @@ def run_clean() -> dict[str, str]:
             results[symbol] = "ok"
         except Exception as e:
             logger.exception(f"Failed to write {symbol}")
-            results[symbol] = e
+            results[symbol] = str(e)
     
     return results
 
@@ -58,6 +59,9 @@ def main() -> None:
     logging.configure(args.verbose)
 
     results = run_clean()
+    failed = {symbol: msg for symbol, msg in results.items() if msg != "ok"}
+    if failed:
+        raise DataSourceError(f"Cleaning failed for {len(failed)} symbol(s): {failed}")
 
 if __name__ == "__main__":
     main()

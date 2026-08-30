@@ -7,7 +7,24 @@ preserving the original index.
 import pandas as pd
 import numpy as np
 
-from ..common.errors import InvalidRequest
+from ..common.errors import InvalidRequest, DataValidationError
+
+# ----------------------------
+# Validation
+# ----------------------------
+def validated_prices(series: pd.Series, label: str) -> pd.Series:
+    """
+    Guard shared by every return-like computation (feature.returns, and any
+    feature - e.g. momentum - built directly on log/pct price changes): a
+    non-positive price makes P_t/P_{t-n} undefined and must fail loudly
+    rather than silently produce an inf/NaN/garbage value downstream.
+    """
+    if (series <= 0).any():
+        raise DataValidationError(
+            f"Non-positive price for {label}; return-like computations are undefined. "
+            "Re-run cleaning to drop invalid rows before computing returns."
+        )
+    return series
 
 # ----------------------------
 # Rolling

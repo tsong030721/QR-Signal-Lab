@@ -10,14 +10,13 @@ which should already have dropped such rows upstream.
 import pandas as pd
 
 from . import base
-from ..common.errors import DataValidationError
 
 def simple_returns(data: dict[str, pd.DataFrame], field: str = "close") -> pd.DataFrame:
     """
     Wide DataFrame (tickers as columns) of simple returns: P_t/P_{t-1} - 1.
     """
     return pd.DataFrame({
-        ticker: base.pct_return(_validated_prices(df[field], ticker))
+        ticker: base.pct_return(base.validated_prices(df[field], ticker))
         for ticker, df in data.items()
     })
 
@@ -26,14 +25,16 @@ def log_returns(data: dict[str, pd.DataFrame], field: str = "close") -> pd.DataF
     Wide DataFrame (tickers as columns) of log returns: log(P_t / P_{t-1}).
     """
     return pd.DataFrame({
-        ticker: base.log_return(_validated_prices(df[field], ticker))
+        ticker: log_return_series(df[field], ticker)
         for ticker, df in data.items()
     })
 
-def _validated_prices(prices: pd.Series, ticker: str) -> pd.Series:
-    if (prices <= 0).any():
-        raise DataValidationError(
-            f"Non-positive price for {ticker}; returns are undefined. "
-            "Re-run cleaning to drop invalid rows before computing returns."
-        )
-    return prices
+def log_return_series(series: pd.Series, label: str, periods: int = 1) -> pd.Series:
+    """
+    Single-series log return with the same non-positive-price guard as
+    log_returns(). Exposed so any feature needing a log price change over an
+    arbitrary window (momentum, volatility) goes through this module's
+    validation rather than calling base.log_return directly and re-deriving
+    the guard.
+    """
+    return base.log_return(base.validated_prices(series, label), periods)

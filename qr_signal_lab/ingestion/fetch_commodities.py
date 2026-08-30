@@ -105,7 +105,7 @@ def _validate_params(start: str | None, end: str | None,
 def _clean_symbols(symbols: list[str]) -> list[str]:
     cleaned = []
     for s in symbols:
-        s.strip()
+        s = s.strip()
         if not s:
             raise InvalidRequest("Symbol must be a non-empty string.")
         cleaned.append(s)
