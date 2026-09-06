@@ -34,6 +34,19 @@ def load(symbol: str, *, start: str | None = None, end: str | None = None) -> pd
 
     return df
 
+def load_panel(symbols: list[str], *, start: str | None = None, end: str | None = None) -> pd.DataFrame:
+    """
+    Loads multiple symbols into one wide panel: MultiIndex (field, ticker) columns.
+    Dates are outer-joined across symbols, so ragged per-ticker history becomes
+    leading NaN rather than truncating the panel to the latest common start date.
+    """
+    if not symbols:
+        raise InvalidRequest("load_panel requires at least one symbol.")
+
+    per_symbol = {symbol: load(symbol, start=start, end=end) for symbol in symbols}
+    panel = pd.concat(per_symbol, axis=1, join="outer")
+    return panel.swaplevel(0, 1, axis=1).sort_index(axis=1)
+
 # ----------------------------
 # Helpers
 # ----------------------------

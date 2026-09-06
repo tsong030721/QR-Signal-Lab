@@ -1,32 +1,19 @@
 """
-Utility to collectively apply feature computations for ticker data.
+Runs a StrategySpec's feature chain against a loaded panel.
 """
 import pandas as pd
-from .config import FEATURES_1D, FEATURES_2D
 
-def compute_features(
-        data: dict[str, pd.DataFrame], 
-        normalize: bool | None = False
-    ) -> dict[str, pd.DataFrame]:
-    """Computes all features in config.FEATURES_1D, one wide DataFrame (tickers as columns) per feature."""
-    features = dict()
-    # Populate features with empty dataframes
-    for label in FEATURES_1D:
-        columns = dict()
+from ..common.errors import InvalidRequest
+from ..spec import StrategySpec
 
-        # Create wide dataframe
-        for ticker in data:
-            window = FEATURES_1D[label]["window"]
-            if window:
-                columns[ticker] = FEATURES_1D[label]["method"](data[ticker]["close"], window)
-            else:
-                columns[ticker] = FEATURES_1D[label]["method"](data[ticker]["close"])
-        features[label] = pd.DataFrame(columns)
-
-        # Normalize if indicated and applicable
-        if normalize and FEATURES_1D[label]["normalize"]:
-            for normalizer in FEATURES_2D:
-                label_csec = label + "_" + normalizer
-                features[label_csec] = FEATURES_2D[normalizer]["method"](features[label])
-    
-    return features
+def compute_feature(spec: StrategySpec, panel: pd.DataFrame) -> pd.DataFrame:
+    """Applies spec.feature_steps in order to panel[spec.input_field], returning the final wide DataFrame."""
+    result = panel[spec.input_field]
+    for fn, params, scope in spec.feature_steps:
+        if scope == "series":
+            result = result.apply(lambda col: fn(col, **params), axis=0)
+        elif scope == "cross_sectional":
+            result = fn(result, **params)
+        else:
+            raise InvalidRequest(f"Unknown feature-step scope: {scope!r}")
+    return result
