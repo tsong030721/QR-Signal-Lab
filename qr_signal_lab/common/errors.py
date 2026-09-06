@@ -1,9 +1,4 @@
-"""
-Base template for raising specific errors.
-    1. Never return None for failures.
-    2. Raise as close to the source of failure as possible.
-    3. Catch only at boundaries - not helpers.
-""" 
+"""Typed error hierarchy. Raise as close to the failure as possible; catch only at layer boundaries."""
 
 class BaseError(Exception):
     """Base class for all errors."""

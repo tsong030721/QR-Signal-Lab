@@ -1,7 +1,4 @@
-"""
-Functions to standardize raw parquet data files.
-
-"""
+"""Functions to standardize raw parquet data files."""
 import pandas as pd
 from . import config
 from ..common import logging, paths
@@ -78,11 +75,7 @@ def _sort_and_dedupe(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def _handle_missing(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
-    """
-    Drop rows with a non-positive price. A price <= 0 (e.g. the CL=F WTI settlement
-    of -$37.63 on 2020-04-20) is not a valid observation - propagating it produces
-    a >100% negative return and NaN log-returns instead of a clean failure.
-    """
+    """Drops rows with any non-positive OHLC/adj_close price; logs each drop."""
     invalid = (df[config.PRICE_COLUMNS] <= 0).any(axis=1)
     if invalid.any():
         logger.warning(

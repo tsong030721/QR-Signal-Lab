@@ -12,9 +12,7 @@ from ..common.errors import InvalidRequest, DataSourceError, EmptyData
 # ----------------------------
 def fetch_one(symbol: str, *, start: str | None = None, end: str | None = None,
               period: str | None = None, interval: str = "1d") -> pd.DataFrame:
-    """
-    Fetch OHLCV for a single ticker. Returns a DataFrame or raises.
-    """
+    """Fetches OHLCV for a single ticker."""
     # Validate symbol and params
     symbol = _clean_symbols([symbol])
     _validate_params(start, end, period, interval)
@@ -24,10 +22,7 @@ def fetch_one(symbol: str, *, start: str | None = None, end: str | None = None,
 
 def fetch_batch(symbols: list[str], *, start: str | None = None, end: str | None = None,
                 period: str | None = None, interval: str = "1d") -> pd.DataFrame:
-    """
-    Fetch merged OHLCV for multiple tickers with MultiIndex columns. 
-    Returns a DataFrame or raises.
-    """
+    """Fetches merged OHLCV for multiple tickers as one DataFrame with MultiIndex columns."""
     # Validate symbols and params
     symbols = _clean_symbols(symbols)
     _validate_params(start, end, period, interval)
@@ -37,10 +32,7 @@ def fetch_batch(symbols: list[str], *, start: str | None = None, end: str | None
 
 def fetch_batch_separate(symbols: list[str], *, start: str | None = None, end: str | None = None,
                          period: str | None = None, interval: str = "1d") -> list[pd.DataFrame]:
-    """
-    Fetches a separate OHLCV for each of the multiple tickers. 
-    Returns a list of DataFrames or raises.
-    """
+    """Fetches OHLCV for multiple tickers as a list of separate DataFrames."""
     # Validate symbols and parameters
     symbols = _clean_symbols(symbols)
     _validate_params(start, end, period, interval)
@@ -57,10 +49,7 @@ def fetch_batch_separate(symbols: list[str], *, start: str | None = None, end: s
 # ----------------------------
 def _yfdownload_wrapper(symbols: list[str], start: str | None, end: str | None,
                         period: str | None, interval: str) -> list[pd.DataFrame]:
-    """
-    Wrapper for calling download from yahoo finance.
-    Returns the relavent DataFrame or raises.
-    """
+    """Calls yfinance download and validates the result. Raises DataSourceError/EmptyData on a bad/empty result."""
     # Call yf download
     df = yf.download(symbols, start=start, end=end, 
                      period=period, interval=interval,
@@ -80,9 +69,7 @@ def _yfdownload_wrapper(symbols: list[str], start: str | None, end: str | None,
 def _validate_params(start: str | None, end: str | None, 
                  period: str | None, interval: str | None
     ) -> None:
-    """
-    Validate fetch parameters.
-    """
+    """Validates fetch parameters. Raises InvalidRequest on an invalid/conflicting combination."""
     # Validate period
     if period is not None and period not in PERIODS:
         raise InvalidRequest("Invalid value for period.")

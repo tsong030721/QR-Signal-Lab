@@ -1,11 +1,6 @@
 """
-Canonical return computations.
-
-Returns are not a feature: every consumer of price data (strategy, backtest,
-evaluation) must obtain returns from this module, not by re-deriving them.
-Guards against non-positive prices leaking through as a >100% return or a
-silent NaN from log() of a negative number - see cleaning._handle_missing,
-which should already have dropped such rows upstream.
+Canonical return computations - the sole source of returns for all downstream layers.
+Raises on non-positive prices instead of emitting a silent bad return.
 """
 import pandas as pd
 
@@ -30,11 +25,5 @@ def log_returns(data: dict[str, pd.DataFrame], field: str = "close") -> pd.DataF
     })
 
 def log_return_series(series: pd.Series, label: str, periods: int = 1) -> pd.Series:
-    """
-    Single-series log return with the same non-positive-price guard as
-    log_returns(). Exposed so any feature needing a log price change over an
-    arbitrary window (momentum, volatility) goes through this module's
-    validation rather than calling base.log_return directly and re-deriving
-    the guard.
-    """
+    """Single-series log return with the same non-positive-price guard as log_returns()."""
     return base.log_return(base.validated_prices(series, label), periods)

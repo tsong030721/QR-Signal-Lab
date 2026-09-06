@@ -8,12 +8,7 @@ def compute_features(
         data: dict[str, pd.DataFrame], 
         normalize: bool | None = False
     ) -> dict[str, pd.DataFrame]:
-    """
-    Compute all features in 'config.py' on given ticker DataFrames to 
-    produce a wide DataFrame for each feature with tickers as columns.
-        [data]      : mapping from ticker label to cleaned DF
-        [normalize] : option to include cross sectional features
-    """
+    """Computes all features in config.FEATURES_1D, one wide DataFrame (tickers as columns) per feature."""
     features = dict()
     # Populate features with empty dataframes
     for label in FEATURES_1D:

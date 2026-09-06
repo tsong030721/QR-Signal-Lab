@@ -9,12 +9,7 @@ def compute_positions(
         features: dict[str, pd.DataFrame],
         volatility: bool | None = False
     ) -> dict[str, pd.DataFrame]: 
-    """
-    Compute positions (long,flat,short) based on computed feature values.
-        [features] : Mapping from each feature label to feature value DF
-        [volatility] : Option to apply volatility filters to positions
-    Resulting DFs (dimensions preserved) mapped to their original feature labels.
-    """
+    """Computes positions from feature values, optionally applying the volatility filter. Dimensions preserved."""
     positions = dict()
     for feature in FEATURE_RULES:
         if feature not in features:

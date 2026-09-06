@@ -1,14 +1,6 @@
 """
-Ticker universe definition, grouped by sector.
-
-Single source of truth for "what can we trade" - used by ingestion (what to
-fetch) and by feature/strategy (cross-sectional grouping). Momentum in corn
-and momentum in crude oil aren't directly comparable without first controlling
-for sector, so cross-sectional rules should group by sector rather than rank
-across the full universe (see StrategySpec.universe in the V1 architecture).
-
-Extend by adding symbols to a sector list below - nothing downstream hardcodes
-this universe's size or membership.
+Ticker universe, grouped by sector - the single source of truth for what's tradable.
+Extend by editing SECTORS; nothing downstream hardcodes size or membership.
 """
 SECTORS: dict[str, list[str]] = {
     "energy": ["CL=F", "NG=F", "RB=F", "HO=F", "BZ=F"],

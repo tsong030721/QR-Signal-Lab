@@ -1,8 +1,6 @@
 """
-Volatility utilities for computing volatility statistics and trends.
-
-All functions operate on pandas Series and return aligned Series
-preserving the original index. 
+Volatility statistics and regime utilities.
+Operate on pandas Series, returning aligned Series with the original index preserved.
 """
 import math
 import pandas as pd
@@ -20,11 +18,7 @@ def realized_volatility(
         window: int,
         annualized: bool = False
     ) -> pd.Series:
-    """
-    Compute the rolling standard deviation on log returns
-        [annualized] : Option to extrapolate annualized values, assuming
-                        TRADING_DAYS_PER_YEAR periods/year
-    """
+    """Rolling standard deviation of log returns. annualized=True scales by sqrt(TRADING_DAYS_PER_YEAR)."""
     volatility = rolling_std(log_return_series(series, series.name or "realized_volatility input"), window)
     if annualized:
         volatility *= math.sqrt(TRADING_DAYS_PER_YEAR)
@@ -38,10 +32,8 @@ def vol_regime_flag(
         long_window: int | None = None
     ) -> pd.Series:
     """
-    Flag whether short-term realized volatility exceeds long-term:
-    1 = high-vol regime, 0 = calm, NaN = unknown (insufficient history).
-    NaN is NOT calm - callers must treat it as high-vol / do-not-trade
-    (see strategy.rules.vol_filtered_positions).
+    Flags whether short-term realized vol exceeds long-term: 1 = high-vol, 0 = calm.
+    NaN = unknown (insufficient history) - callers must treat NaN as high-vol, not calm.
     """
     if long_window is None:
         long_window = 5 * short_window

@@ -1,8 +1,6 @@
 """
-Foundational utilities for computing rolling statistics and returns.
-
-All functions operate on pandas Series and return aligned Series
-preserving the original index. 
+Foundational rolling-statistic and return utilities.
+Operate on pandas Series, returning aligned Series with the original index preserved.
 """
 import pandas as pd
 import numpy as np
@@ -13,12 +11,7 @@ from ..common.errors import InvalidRequest, DataValidationError
 # Validation
 # ----------------------------
 def validated_prices(series: pd.Series, label: str) -> pd.Series:
-    """
-    Guard shared by every return-like computation (feature.returns, and any
-    feature - e.g. momentum - built directly on log/pct price changes): a
-    non-positive price makes P_t/P_{t-n} undefined and must fail loudly
-    rather than silently produce an inf/NaN/garbage value downstream.
-    """
+    """Validates prices for return computation. Raises DataValidationError on any non-positive price."""
     if (series <= 0).any():
         raise DataValidationError(
             f"Non-positive price for {label}; return-like computations are undefined. "
@@ -34,9 +27,7 @@ def rolling_mean(
         window: int, 
         min_periods: int | None = None
     ) -> pd.Series:
-    """
-    Compute the rolling mean of a time series.
-    """
+    """Computes the rolling mean of a time series."""
     if min_periods is None:
         min_periods = window
 
@@ -51,10 +42,7 @@ def rolling_std(
         min_periods: int | None = None,
         ddof: int = 0
     ) -> pd.Series:
-    """
-    Compute the rolling standard deviation of a time series.
-        [ddof]: degrees of freedom for std computation
-    """
+    """Computes the rolling standard deviation of a time series. ddof: degrees of freedom."""
     if min_periods is None:
         min_periods = window
 
@@ -69,10 +57,7 @@ def rolling_zscore(
         min_periods: int | None = None, 
         ddof: int = 0
     ) -> pd.Series:
-    """
-    Compute the rolling z-score of a time series.
-        [ddof]: degrees of freedom for std computation
-    """
+    """Computes the rolling z-score of a time series. ddof: degrees of freedom."""
     if min_periods is None:
         min_periods = window
 
@@ -92,18 +77,14 @@ def lag(series: pd.Series, periods: int = 1) -> pd.Series:
 
 
 def pct_return(series: pd.Series, periods: int = 1) -> pd.Series:
-    """
-    Compute the percentage returns of a time series: (P_t/P_{t-n})-1
-    """
+    """Computes percentage returns: (P_t/P_{t-n}) - 1."""
     _check_period(series.size, periods)
 
     return series.pct_change(periods)
 
 
 def log_return(series: pd.Series, periods: int = 1) -> pd.Series:
-    """
-    Compute the log returns of a time series: log(P_t/P_{t-n})
-    """
+    """Computes log returns: log(P_t/P_{t-n})."""
     _check_period(series.size, periods)
 
     return np.log(series / lag(series, periods))
