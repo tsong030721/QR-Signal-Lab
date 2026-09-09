@@ -17,29 +17,6 @@ python3 -m qr_signal_lab.cleaning.run_clean -v        # -> data/clean/{sym}.parq
 ```
 No tests/linter/build yet (Phase 4). No feature/strategy/backtest entry point yet (Phase 4 adds `run_experiment.py`) — drive manually per `notebooks/exploration.ipynb`.
 
-## Status: Phase 0 DONE
-
-- Price-validity guard: `cleaning/clean_commodities.py._handle_missing` drops any row with non-positive OHLC/adj_close, logs loudly.
-- Dedupe bug fixed (`~duplicated`); bare `Exception` → typed errors (`DataValidationError`/`DataSourceError`).
-- `feature/returns.py` is the sole source of returns (`simple_returns`/`log_returns`), raises `DataValidationError` on non-positive price as defense-in-depth. `pct_return`/`log_return` removed from `FEATURES_1D` — returns aren't a feature.
-- `strategy/rules.py`: NaN-safe (NaN → flat, never a direction); rank direction fixed (`csec_rank_positions`: `top_pct=0.8`→long, `bottom_pct=0.2`→short, ascending rank, 1.0=highest).
-- `feature/volatility.vol_regime_flag` returns NaN (not 0) when unknown; `vol_filtered_positions` treats NaN as high-vol via `.fillna(1)`.
-- Verification + incident detail: RECS.md #1, #5, #6.
-
-## Status: convention audit DONE (post-expansion of "Conventions to hold throughout")
-
-Two-pass check (build/fix agent, then an independent strict-review agent) against every bullet below, human-verified before commit. Findings and fixes:
-
-- `feature/returns.py` is now the single source of log-return math end-to-end: added `log_return_series` (single-series, windowed); `feature/momentum.momentum_return` and `feature/volatility.realized_volatility` route through it instead of calling `base.log_return` directly. Closes a real gap — `realized_volatility` previously had no non-positive-price guard at all (momentum did), so a bad price would have silently produced NaN/-inf into a vol estimate instead of raising.
-- `backtest/engine.compute_portfolio_weights` asserts positions are NaN-free before weighting — `skipna=True` sums could otherwise pass the gross-exposure=1.0 check while a NaN cell still survived into the returned weights.
-- `strategy/rules.vol_filtered_positions` raises `SchemaMismatch` on unaligned `positions`/`vol_flag` instead of relying on pandas' implicit `fill_value=0` — matches the alignment guard `backtest/engine.py` already had.
-- `feature/volatility.TRADING_DAYS_PER_YEAR = 252` replaces the bare literal.
-- `backtest/costs.compute_turnovers` seeds an explicit flat prior row so flat→first-trade prices as real turnover, not free (RECS #10).
-- `access/data_api.load` raises `DataSourceError`, not bare `Exception`, on a parquet-read failure.
-- `ingestion/fetch_commodities._clean_symbols`: fixed a discarded `.strip()` (was a no-op; also let whitespace-only symbols slip past the empty check).
-- `run_ingestion.main()`/`run_clean.main()` now raise `DataSourceError` if any per-symbol write failed, instead of silently exiting 0 with an unread `results` dict (RECS #11).
-- Deliberately not touched (explicitly future-phase, not a violation): `backtest/pipeline.py`'s non-running draft, `FEATURES_1D`/`FEATURE_RULES` string-keyed dispatch, universe-wide (not per-sector) cross-sectional rank — all Phase 1/2 per the roadmap below.
-
 ## V1 target architecture
 
 ```
@@ -47,26 +24,19 @@ qr_signal_lab/
   common/        config, paths, errors, logging, types      [unchanged]
   ingestion/                                                  [unchanged]
   cleaning/                                                   [Phase 0 done]
-  access/        load() single-symbol -> ADD load_panel(symbols, start, end) -> MultiIndex (field, ticker) columns
-  feature/       registry-driven -> params live on the spec, not FEATURES_1D's global `window`
-  strategy/      NaN-safe rules [done] -> dispatch off spec, not FEATURE_RULES string matching
+  access/        load() single-symbol + load_panel(symbols, start, end) -> MultiIndex (field, ticker) columns  [Phase 1 done]
+  feature/       spec-driven; params live on the spec, not a global registry  [Phase 1 done]
+  strategy/      NaN-safe rules; dispatch off spec, not string matching  [Phase 1 done]
   backtest/      costs.py works; engine.py has the math; pipeline.py (run_backtests) is a non-running draft -> rewrite
   evaluate/      NEW — metrics.py, split.py, sweep.py
-  spec.py        NEW — StrategySpec dataclass, the unit of research
+  spec.py        StrategySpec dataclass, the unit of research  [Phase 1 done]
   run_experiment.py  NEW — single CLI entry point
 ```
 
-- **`StrategySpec`** (frozen dataclass): `feature_fn`, `feature_params`, `rule_fn`, `rule_params`, `sizing`, `cost_bps`, `universe`, `date_range`; derives `.name`. `universe` defaults to `all_tickers()`, accepts a subset or `SECTORS["energy"]`. Replaces string-keyed registries in `feature/config.py`/`strategy/config.py`. A sweep = list of specs.
-- **`BacktestResult`** (dataclass): positions, weights, gross/net returns, turnover, equity, originating spec. Metrics computed *from* this, never inside the backtest.
+- **`StrategySpec`** (frozen dataclass, in `spec.py`): `feature_steps` (ordered list of `(fn, params, scope)`, scope = `"series"` or `"cross_sectional"`), `input_field`, `rule_fn`, `rule_params`, `sizing`, `cost_bps`, `universe`, `date_range`; derives `.name`. `universe` defaults to `all_tickers()`, accepts a subset or `SECTORS["energy"]`. A sweep = list of specs.
+- **`BacktestResult`** (dataclass, not yet built): positions, weights, gross/net returns, turnover, equity, originating spec. Metrics computed *from* this, never inside the backtest.
 
 ## Remaining phases
-
-**Phase 1 — Panel + Spec**
-- `access/data_api.py`: add `load_panel(symbols, start, end)`.
-- New `spec.py`: `StrategySpec`.
-- `feature/pipeline.py`: spec-driven, explicit params (retire `FEATURES_1D`'s global window); spec names its input field.
-- `strategy/pipeline.py`: dispatch off spec; delete `FEATURE_RULES` string matching.
-- `feature/normalization.py`: cross-sectional rank/zscore default to *within-sector* (`sector_of`), not full universe — explicit spec option, never silent.
 
 **Phase 2 — Finish backtest**
 - `backtest/pipeline.py`: rewrite as `run_backtest(spec, panel) -> BacktestResult`. Sequence: shift → align → size → weights → turnover → costs → net → equity.
@@ -120,3 +90,10 @@ qr_signal_lab/
   constants inside implementation code.
 - Tests prioritize invariants over example outputs: no-lookahead, alignment,
   sign, exposure, turnover, NaN handling, and deterministic results.
+
+## Status
+
+- **Phase 0 done**: price-validity guard, dedupe fix, typed errors, NaN-safe strategy rules, correct rank/vol-regime sign conventions. Detail: RECS.md #1, #5, #6.
+- **Convention audit done**: two-pass (build + independent strict review) fixed gaps against the conventions above — returns routed through `feature/returns.py` everywhere, NaN-free assertion before weighting, explicit alignment guards, turnover's flat-prior seed, typed errors on I/O failures. Detail: RECS.md #10, #11.
+- **Phase 1 done**: `spec.py` (`StrategySpec`), `access/data_api.load_panel`, spec-driven `feature/pipeline.py`/`strategy/pipeline.py`. Old string-keyed `FEATURES_1D`/`FEATURE_RULES` registries deleted. Multi-feature rules (e.g. vol-filtering, which needs positions plus an auxiliary vol-regime feature) are explicitly tabled — not yet composable through a single `StrategySpec`. `notebooks/exploration.ipynb` still targets the pre-Phase-1 API — leave as-is until Phase 4.
+- **Next up: Phase 2** (backtest rewrite). `qr_signal_lab/backtest/` has untracked work in progress — check `git status` before assuming Phase 2 hasn't started.
