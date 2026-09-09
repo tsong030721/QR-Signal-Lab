@@ -27,24 +27,16 @@ qr_signal_lab/
   access/        load() single-symbol + load_panel(symbols, start, end) -> MultiIndex (field, ticker) columns  [Phase 1 done]
   feature/       spec-driven; params live on the spec, not a global registry  [Phase 1 done]
   strategy/      NaN-safe rules; dispatch off spec, not string matching  [Phase 1 done]
-  backtest/      costs.py works; engine.py has the math; pipeline.py (run_backtests) is a non-running draft -> rewrite
+  backtest/      run_backtest(spec, panel, positions) -> BacktestResult  [Phase 2 done]
   evaluate/      NEW — metrics.py, split.py, sweep.py
-  spec.py        StrategySpec dataclass, the unit of research  [Phase 1 done]
+  spec.py        StrategySpec dataclass, the unit of research  [Phase 1 + 2 done]
   run_experiment.py  NEW — single CLI entry point
 ```
 
-- **`StrategySpec`** (frozen dataclass, in `spec.py`): `features` (`dict[str, FeatureSpec]`, each a named `input_field` + ordered `(fn, params, scope)` step chain, scope = `"series"` or `"cross_sectional"`), `rule_steps` (ordered `(fn, params, feature_name)`; the first step's fn takes just its named feature, every later step folds in one more named feature on top of the running positions — this is how multi-feature rules like vol-filtering compose), `sizing`, `cost_bps`, `universe`, `date_range`; derives `.name`. `universe` defaults to `all_tickers()`, accepts a subset or `SECTORS["energy"]` — `feature/pipeline.py` restricts every named feature to it before running its steps, so cross-sectional steps rank over the declared universe and every feature ends up column-aligned with every other. A sweep = list of specs.
-- **`BacktestResult`** (dataclass, not yet built): positions, weights, gross/net returns, turnover, equity, originating spec. Metrics computed *from* this, never inside the backtest.
+- **`StrategySpec`** (frozen dataclass, in `spec.py`): `features` (`dict[str, FeatureSpec]`, each a named `input_field` + ordered `(fn, params, scope)` step chain, scope = `"series"` or `"cross_sectional"`), `rule_steps` (ordered `(fn, params, feature_name)`; the first step's fn takes just its named feature, every later step folds in one more named feature on top of the running positions — this is how multi-feature rules like vol-filtering compose), `sizing` (`"equal_weight"` or `"inverse_vol"`), `vol_window`, `vol_target` (optional annualized vol-targeting overlay), `cost_bps`, `universe`, `date_range`; derives `.name`. `universe` defaults to `all_tickers()`, accepts a subset or `SECTORS["energy"]` — `feature/pipeline.py` restricts every named feature to it before running its steps, so cross-sectional steps rank over the declared universe and every feature ends up column-aligned with every other. A sweep = list of specs.
+- **`BacktestResult`** (frozen dataclass, in `backtest/result.py`): `spec`, `positions` (lagged), `weights`, `turnover`, `gross_returns`, `net_returns`, `equity`. Metrics computed *from* this, never inside the backtest.
 
 ## Remaining phases
-
-**Phase 2 — Finish backtest**
-- Carried over from Phase 1: `feature/normalization.py`'s `cross_sectional_rank`/`cross_sectional_zscore` are still full-universe, not within-sector (`sector_of`) — make it an explicit spec option, never silent.
-- `backtest/pipeline.py`: rewrite as `run_backtest(spec, panel) -> BacktestResult`. Sequence: shift → align → size → weights → turnover → costs → net → equity.
-- `backtest/costs.py`: `compute_turnovers` uses `.diff()` — seed an explicit zero row so flat→first-trade isn't free turnover.
-- New `backtest/sizing.py`: inverse-vol weights + portfolio vol target, using `realized_volatility` (computed, currently unused — RECS.md #8).
-- Fill or delete `backtest/config.py` (currently empty).
-- Assert the lag contract centrally: position at *t* uses info ≤ *t*, earns return *t*→*t+1*.
 
 **Phase 3 — Evaluation**
 - `evaluate/metrics.py`: Sharpe, ann. return/vol, max drawdown, Calmar, hit rate, avg turnover, t-stat on mean daily return.
@@ -96,5 +88,6 @@ qr_signal_lab/
 
 - **Phase 0 done**: price-validity guard, dedupe fix, typed errors, NaN-safe strategy rules, correct rank/vol-regime sign conventions. Detail: RECS.md #1, #5, #6.
 - **Convention audit done**: two-pass (build + independent strict review) fixed gaps against the conventions above — returns routed through `feature/returns.py` everywhere, NaN-free assertion before weighting, explicit alignment guards, turnover's flat-prior seed, typed errors on I/O failures. Detail: RECS.md #10, #11.
-- **Phase 1 done**: `spec.py` (`StrategySpec`, `FeatureSpec`), `access/data_api.load_panel`, spec-driven `feature/pipeline.py`/`strategy/pipeline.py`. Old string-keyed `FEATURES_1D`/`FEATURE_RULES` registries deleted. Multi-feature rules (e.g. vol-filtering) are supported via named `features` + a `rule_steps` chain — no changes needed to existing rule_fns (`momentum_positions`, `csec_rank_positions`, `vol_filtered_positions`) since they already matched the chain's two call shapes. `feature/normalization.py`'s rank/zscore are still full-universe, not within-sector — carried into Phase 2 below, untouched here. `notebooks/exploration.ipynb` still targets the pre-Phase-1 API — leave as-is until Phase 4.
-- **Next up: Phase 2** (backtest rewrite). `qr_signal_lab/backtest/` has untracked work in progress — check `git status` before assuming Phase 2 hasn't started.
+- **Phase 1 done**: `spec.py` (`StrategySpec`, `FeatureSpec`), `access/data_api.load_panel`, spec-driven `feature/pipeline.py`/`strategy/pipeline.py`. Old string-keyed `FEATURES_1D`/`FEATURE_RULES` registries deleted. Multi-feature rules (e.g. vol-filtering) are supported via named `features` + a `rule_steps` chain — no changes needed to existing rule_fns (`momentum_positions`, `csec_rank_positions`, `vol_filtered_positions`) since they already matched the chain's two call shapes. `notebooks/exploration.ipynb` still targets the pre-Phase-1 API — leave as-is until Phase 4.
+- **Phase 2 done**: `backtest/pipeline.run_backtest(spec, panel, positions) -> BacktestResult` — positions/features are always computed by the caller (`feature.pipeline`/`strategy.pipeline`) before calling this; `run_backtest` only does shift → align → size → weights → turnover → costs → net → equity, never recomputes a signal. `_lag` is the sole `.shift(1)` call site and asserts row 0 is flat (the lag-contract check). New `backtest/sizing.py` (`inverse_vol_weights`, `vol_target_scale`, both built on `feature/volatility.py`) and `backtest/result.py` (`BacktestResult`). `feature/volatility.py` gained `return_volatility` (rolling std of an already-computed return series) since `realized_volatility` needs strictly-positive prices and can't take a portfolio return stream directly — `vol_target_scale` needed this and originally called `realized_volatility` by mistake, caught by a smoke test. `feature/returns.py` gained `panel_log_returns` (the `load_panel`-shaped counterpart to `log_returns`'s older per-symbol-dict input). `feature/normalization.py`'s rank/zscore now default `within_sector=True` (`sector_of`-grouped), with `within_sector=False` as the explicit opt-out. `backtest/config.py` now holds `INITIAL_CAPITAL`/`PRICE_FIELD`. `StrategySpec`/`BacktestResult` stay out of `common/` — `common/` is domain-agnostic infra (paths/logging/errors/config), and both are domain models with a natural producer (`spec.py` itself; `backtest/pipeline.py` for the result).
+- **Next up: Phase 3** (evaluation layer).

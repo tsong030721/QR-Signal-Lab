@@ -33,6 +33,8 @@ class FeatureSpec:
 # csec_rank_positions) need no signature changes to serve as a first step.
 RuleStep = tuple[Callable, dict, str]
 
+SIZING_METHODS = {"equal_weight", "inverse_vol"}
+
 @dataclass(frozen=True)
 class StrategySpec:
     features: dict[str, FeatureSpec]
@@ -41,6 +43,12 @@ class StrategySpec:
     cost_bps: float = 0.0
     universe: list[str] = field(default_factory=all_tickers)
     date_range: tuple[str | None, str | None] = (None, None)
+    # Rolling lookback (trading days) for inverse_vol sizing and, if set, the
+    # trailing window vol_target measures realized portfolio vol over.
+    vol_window: int = 20
+    # Annualized target portfolio vol (e.g. 0.10 = 10%) for the vol-targeting
+    # overlay applied on top of sizing; None = no vol targeting.
+    vol_target: float | None = None
 
     def __post_init__(self):
         if not self.features:
@@ -49,6 +57,12 @@ class StrategySpec:
             raise InvalidRequest("StrategySpec requires at least one rule step.")
         if not self.universe:
             raise InvalidRequest("StrategySpec requires a non-empty universe.")
+        if self.sizing not in SIZING_METHODS:
+            raise InvalidRequest(f"Unknown sizing method {self.sizing!r}; expected one of {sorted(SIZING_METHODS)}.")
+        if self.vol_window <= 0:
+            raise InvalidRequest(f"vol_window must be positive, got {self.vol_window}.")
+        if self.vol_target is not None and self.vol_target <= 0:
+            raise InvalidRequest(f"vol_target must be positive, got {self.vol_target}.")
 
         unknown = {feature_name for _, _, feature_name in self.rule_steps} - self.features.keys()
         if unknown:
@@ -64,7 +78,8 @@ class StrategySpec:
             f"{fn.__name__}({_params_str(params)})<-{feature_name}"
             for fn, params, feature_name in self.rule_steps
         )
-        return f"{features}__{rules}__{self.sizing}__{self.cost_bps}bps"
+        vol_target = f"__vt{self.vol_target}" if self.vol_target is not None else ""
+        return f"{features}__{rules}__{self.sizing}(vol_window={self.vol_window}){vol_target}__{self.cost_bps}bps"
 
 def _steps_str(steps: list[FeatureStep]) -> str:
     return "-".join(f"{fn.__name__}({_params_str(params)})" for fn, params, _ in steps)

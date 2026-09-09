@@ -18,8 +18,22 @@ def realized_volatility(
         window: int,
         annualized: bool = False
     ) -> pd.Series:
-    """Rolling standard deviation of log returns. annualized=True scales by sqrt(TRADING_DAYS_PER_YEAR)."""
-    volatility = rolling_std(log_return_series(series, series.name or "realized_volatility input"), window)
+    """Rolling standard deviation of a price series' log returns. annualized=True scales by sqrt(TRADING_DAYS_PER_YEAR)."""
+    return return_volatility(log_return_series(series, series.name or "realized_volatility input"), window, annualized)
+
+
+def return_volatility(
+        returns: pd.Series,
+        window: int,
+        annualized: bool = False
+    ) -> pd.Series:
+    """
+    Rolling standard deviation of an already-computed return series (not
+    prices) - e.g. a portfolio's own return stream, which realized_volatility
+    can't take directly since it expects strictly-positive prices to derive
+    returns from. annualized=True scales by sqrt(TRADING_DAYS_PER_YEAR).
+    """
+    volatility = rolling_std(returns, window)
     if annualized:
         volatility *= math.sqrt(TRADING_DAYS_PER_YEAR)
 
